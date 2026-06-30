@@ -1,0 +1,20 @@
+#pragma once
+
+// Copy this file to config.h (gitignored) and fill in real values.
+
+// Wi-Fi credentials
+#define WIFI_SSID     "your-ssid"
+#define WIFI_PASSWORD "your-password"
+
+// GPIO assignment
+#define LED_PIN 2  // onboard LED on most ESP32-DevKitC boards, handy for bring-up
+
+// I2C pins (ESP32-DevKitC defaults)
+#define I2C_SDA 21
+#define I2C_SCL 22
+
+// INA219 current threshold (mA) separating "idle" from "active" webcam draw.
+// Calibrate per-camera: log getCurrent_mA() in both states and set this to
+// the midpoint, not pinned close to either baseline.
+// Unset until calibration data exists (see docs/design-notes.md "Open items").
+#define CURRENT_THRESHOLD_MA 0
