@@ -1,6 +1,7 @@
 services:
   poller:
     build: .
+    container_name: tally-light-poller
     restart: unless-stopped
     env_file: .env
     volumes:

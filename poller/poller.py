@@ -86,9 +86,9 @@ def main():
             creds = load_credentials(token_path)
             busy = is_busy(creds, calendar_ids)
             if busy != last_state:
+                print(f"calendar state -> {'on' if busy else 'off'}", flush=True)
                 push_state(esp32_ip, busy)
                 last_state = busy
-                print(f"calendar state -> {'on' if busy else 'off'}", flush=True)
         except Exception as exc:
             print(f"poll failed: {exc}", flush=True)
         time.sleep(poll_interval)
