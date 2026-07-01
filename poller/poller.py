@@ -1,19 +1,28 @@
-"""Polls Google Calendar free/busy status and pushes on/off state to the
-ESP32's /calendar endpoint. Runs against a personal Google account that the
-work calendar's busy/free blocks are shared into (see docs/design-notes.md)
-for why this avoids OAuth against a locked-down work Workspace account.
+"""Polls Google Calendar for currently active events and pushes on/off state
+to the ESP32's /calendar endpoint. Runs against a personal Google account that
+the work calendar's busy/free blocks are shared into (see
+docs/design-notes.md) for why this avoids OAuth against a locked-down work
+Workspace account.
+
+Uses the Events API rather than freeBusy: freeBusy can't distinguish an
+all-day event from a real meeting, both show up as an opaque busy block
+spanning the whole day, so it would light up the tally light all day for
+things like a holiday or an out-of-office marker. Events have a start.date
+(all-day) or start.dateTime (timed) field, which lets us filter all-day
+events out explicitly.
 """
 
 import datetime
 import os
 import time
+import urllib.parse
 
 import requests
 from google.auth.transport.requests import Request as AuthRequest
 from google.oauth2.credentials import Credentials
 
-FREEBUSY_URL = "https://www.googleapis.com/calendar/v3/freeBusy"
-SCOPES = ["https://www.googleapis.com/auth/calendar.freebusy"]
+EVENTS_URL_TEMPLATE = "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events"
+SCOPES = ["https://www.googleapis.com/auth/calendar.events.readonly"]
 
 
 def load_credentials(token_path):
@@ -25,22 +34,34 @@ def load_credentials(token_path):
     return creds
 
 
-def is_busy(creds, calendar_ids):
-    now = datetime.datetime.now(datetime.timezone.utc)
-    body = {
-        "timeMin": now.isoformat(),
-        "timeMax": (now + datetime.timedelta(minutes=1)).isoformat(),
-        "items": [{"id": cal_id} for cal_id in calendar_ids],
-    }
-    resp = requests.post(
-        FREEBUSY_URL,
-        json=body,
+def has_active_event(creds, calendar_id, now):
+    url = EVENTS_URL_TEMPLATE.format(calendar_id=urllib.parse.quote(calendar_id, safe=""))
+    resp = requests.get(
+        url,
         headers={"Authorization": f"Bearer {creds.token}"},
+        params={
+            "timeMin": (now - datetime.timedelta(seconds=30)).isoformat(),
+            "timeMax": (now + datetime.timedelta(seconds=30)).isoformat(),
+            "singleEvents": "true",
+            "showDeleted": "false",
+        },
         timeout=10,
     )
     resp.raise_for_status()
-    calendars = resp.json().get("calendars", {})
-    return any(cal.get("busy") for cal in calendars.values())
+    for event in resp.json().get("items", []):
+        if event.get("status") == "cancelled":
+            continue
+        if "dateTime" not in event.get("start", {}):
+            continue  # all-day event, ignore
+        if event.get("transparency") == "transparent":
+            continue  # explicitly marked "free"
+        return True
+    return False
+
+
+def is_busy(creds, calendar_ids):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    return any(has_active_event(creds, cal_id, now) for cal_id in calendar_ids)
 
 
 def push_state(esp32_ip, busy):

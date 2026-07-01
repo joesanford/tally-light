@@ -28,7 +28,8 @@ ESP32 combines both signals with OR logic: LED is on if camera is active or cale
 
 - Work calendar lives on a managed Google Workspace account where self-serve OAuth app creation/consent is often locked down, so it couldn't reliably be built around the Calendar API with a standard OAuth flow against the work account.
 - Resolution: shared the work calendar's busy/free status into a personal Google account (`joe.sanford@bighealth.com` now appears as a subscribed "Other calendar" with free/busy-only blocks, no event details, good for privacy too).
-- Polling happens against the personal account using the standard Calendar API (`freebusy().query`), checking both `primary` and the work calendar ID. No work-machine involvement at all.
+- Polling happens against the personal account using the standard Calendar API, checking both `primary` and the work calendar ID. No work-machine involvement at all.
+- Uses `events.list` rather than `freebusy().query`: freeBusy collapses everything into opaque busy blocks and can't tell an all-day event (holiday, out-of-office marker) from a real meeting, so it would light the tally light all day for those. `events.list` exposes `start.dateTime` vs `start.date`, so all-day events can be filtered out and only timed, non-transparent, non-cancelled events count as busy.
 - (iCal secret-address polling was an earlier fallback considered before confirming OAuth would work fine against the personal account. Left here as a noted alternative if OAuth setup ever becomes a hassle.)
 
 ### Where the poller runs: antares (Docker), not the ESP32
