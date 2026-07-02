@@ -21,6 +21,8 @@ void updateLed() {
 void pollCamera() {
   float current_mA = ina219.getCurrent_mA();
   cameraActive = current_mA >= CURRENT_THRESHOLD_MA;
+  Serial.printf("current_mA=%.2f cameraActive=%d calendarBusy=%d led=%d\n",
+                current_mA, cameraActive, calendarBusy, cameraActive || calendarBusy);
 }
 
 void handleCalendar() {
@@ -39,6 +41,7 @@ void handleCalendar() {
     return;
   }
 
+  Serial.printf("received /calendar?state=%s -> calendarBusy=%d\n", state.c_str(), calendarBusy);
   updateLed();
   server.send(200, "text/plain", "ok");
 }

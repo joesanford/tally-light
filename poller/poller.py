@@ -26,11 +26,13 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.events.readonly"]
 
 
 def load_credentials(token_path):
+    # Re-read from disk and refresh in-memory only, every poll cycle -- no
+    # need to persist the refreshed access token back, the file's
+    # refresh_token alone is enough to mint a new one each time, and
+    # secrets/ is mounted read-only.
     creds = Credentials.from_authorized_user_file(token_path, SCOPES)
     if creds.expired and creds.refresh_token:
         creds.refresh(AuthRequest())
-        with open(token_path, "w") as f:
-            f.write(creds.to_json())
     return creds
 
 

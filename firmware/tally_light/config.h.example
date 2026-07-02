@@ -16,5 +16,7 @@
 // INA219 current threshold (mA) separating "idle" from "active" webcam draw.
 // Calibrate per-camera: log getCurrent_mA() in both states and set this to
 // the midpoint, not pinned close to either baseline.
-// Unset until calibration data exists (see docs/design-notes.md "Open items").
-#define CURRENT_THRESHOLD_MA 0
+// Deliberately absurdly high until calibration data exists (see
+// docs/design-notes.md "Open items") -- 0 would make cameraActive stick
+// true from an unwired/uncalibrated INA219, keeping the LED on permanently.
+#define CURRENT_THRESHOLD_MA 100000
