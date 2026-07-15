@@ -2,6 +2,11 @@
 
 // Copy this file to config.h (gitignored) and fill in real values.
 
+// Log verbosity: LOG_DEBUG, LOG_INFO, LOG_WARN, or LOG_ERROR. LOG_DEBUG
+// includes the once-per-second camera poll line, handy during INA219
+// calibration but noisy for normal operation.
+#define LOG_LEVEL LOG_INFO
+
 // Wi-Fi credentials
 #define WIFI_SSID     "your-ssid"
 #define WIFI_PASSWORD "your-password"

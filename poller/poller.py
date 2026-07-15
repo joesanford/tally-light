@@ -13,6 +13,7 @@ events out explicitly.
 """
 
 import datetime
+import logging
 import os
 import time
 import urllib.parse
@@ -21,8 +22,12 @@ import requests
 from google.auth.transport.requests import Request as AuthRequest
 from google.oauth2.credentials import Credentials
 
+from logfmt import configure_logging
+
 EVENTS_URL_TEMPLATE = "https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events"
 SCOPES = ["https://www.googleapis.com/auth/calendar.events.readonly"]
+
+log = logging.getLogger(__name__)
 
 
 def load_credentials(token_path):
@@ -77,10 +82,18 @@ def push_state(esp32_ip, busy):
 
 
 def main():
+    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    configure_logging("poller", level=logging.getLevelName(log_level))
+
     esp32_ip = os.environ["ESP32_IP"]
     calendar_ids = os.environ.get("CALENDAR_IDS", "primary").split(",")
     token_path = os.environ.get("TOKEN_PATH", "/secrets/token.json")
     poll_interval = int(os.environ.get("POLL_INTERVAL_SECONDS", "60"))
+
+    log.info(
+        "poller starting",
+        extra={"esp32_ip": esp32_ip, "calendar_ids": ",".join(calendar_ids), "poll_interval_s": poll_interval},
+    )
 
     last_state = None
     while True:
@@ -88,11 +101,14 @@ def main():
             creds = load_credentials(token_path)
             busy = is_busy(creds, calendar_ids)
             if busy != last_state:
-                print(f"calendar state -> {'on' if busy else 'off'}", flush=True)
+                state = "on" if busy else "off"
+                log.info("calendar state changed", extra={"state": state})
                 push_state(esp32_ip, busy)
                 last_state = busy
+            else:
+                log.debug("poll ok, no change", extra={"state": "on" if busy else "off"})
         except Exception as exc:
-            print(f"poll failed: {exc}", flush=True)
+            log.error("poll failed", extra={"error": str(exc)})
         time.sleep(poll_interval)
 
 
